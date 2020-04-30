@@ -42,6 +42,17 @@ fn loop_read(reader: impl BufRead, sink: &Sender<String>) {
     }
 }
 
+pub(super) fn handle_rpc_message(msg: Message) -> anyhow::Result<()> {
+    if let Some(dir) = msg.params.get("cwd").and_then(|x| x.as_str()) {
+        let latest_remote_release = crate::cmd::check_release::latest_remote_release()?;
+        let version_number = crate::cmd::check_release::extract_remote_version_number(
+            &latest_remote_release.tag_name,
+        );
+        write_response(json!({ "version_number": version_number, "id": msg.id }));
+    }
+    Ok(())
+}
+
 fn loop_handle_message(rx: &crossbeam_channel::Receiver<String>) {
     for msg in rx.iter() {
         thread::spawn(move || {
@@ -49,6 +60,9 @@ fn loop_handle_message(rx: &crossbeam_channel::Receiver<String>) {
             if let Ok(msg) = serde_json::from_str::<Message>(&msg.trim()) {
                 match &msg.method[..] {
                     REQUEST_FILER => filer::handle_message(msg),
+                    "clap.rpc" => {
+                        let _ = handle_rpc_message(msg);
+                    }
                     _ => write_response(json!({ "error": "unknown method", "id": msg.id })),
                 }
             }

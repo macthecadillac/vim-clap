@@ -104,7 +104,7 @@ pub fn latest_remote_release() -> Result<RemoteRelease> {
 
 /// remote: "v0.13"
 #[inline]
-fn extract_remote_version_number(remote_tag: &str) -> u32 {
+pub fn extract_remote_version_number(remote_tag: &str) -> u32 {
     let v = remote_tag.split('.').collect::<Vec<_>>();
     v[1].parse().expect("Couldn't extract remote version")
 }
