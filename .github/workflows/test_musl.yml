@@ -1,0 +1,25 @@
+on: [push, pull_request]
+
+name: Test Musl
+
+jobs:
+  publish-linux-musl:
+    name: Publish for Linux Musl Target
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+        include:
+          - os: ubuntu-latest
+            artifact_name: maple
+            asset_name: maple-x86_64-unknown-linux-musl
+
+    steps:
+    - uses: hecrj/setup-rust-action@master
+      with:
+        rust-version: stable
+
+    - uses: actions/checkout@v1
+
+    - name: Build
+      run: rustup target add x86_64-unknown-linux-musl && cargo build --target x86_64-unknown-linux-musl --release --locked && ls target
