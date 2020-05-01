@@ -19,7 +19,7 @@ pub enum Cmd {
     Version,
     /// Start the stdio-based service, currently there is only filer support.
     #[structopt(name = "rpc")]
-    RPC,
+    RPC(crate::cmd::rpc::Rpc),
     /// Execute the grep command to avoid the escape issue
     #[structopt(name = "grep")]
     Grep(crate::cmd::grep::Grep),

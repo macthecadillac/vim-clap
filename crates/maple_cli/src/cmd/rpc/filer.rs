@@ -1,6 +1,7 @@
 use std::{fs, io};
 
 use anyhow::Result;
+use serde::{Deserialize, Serialize};
 use serde_json::json;
 
 use super::{write_response, Message};
@@ -37,29 +38,48 @@ fn read_dir_entries(dir: &str, enable_icon: bool) -> Result<Vec<String>> {
     Ok(entries)
 }
 
-pub(super) fn handle_message(msg: Message) {
-    if let Some(dir) = msg.params.get("cwd").and_then(|x| x.as_str()) {
-        let enable_icon = msg
-            .params
-            .get("enable_icon")
-            .and_then(|x| x.as_bool())
-            .unwrap_or(false);
-        let result = match read_dir_entries(&dir, enable_icon) {
-            Ok(entries) => {
-                let result = json!({
-                "entries": entries,
-                "dir": dir,
-                "total": entries.len(),
-                });
-                json!({ "result": result, "id": msg.id })
-            }
-            Err(err) => {
-                let error = json!({"message": format!("{}", err), "dir": dir});
-                json!({ "error": error, "id": msg.id })
-            }
-        };
-        write_response(result);
+#[derive(Serialize, Deserialize)]
+struct FilerParams {
+    cwd: String,
+    enable_icon: bool,
+}
+
+impl From<serde_json::Map<String, serde_json::Value>> for FilerParams {
+    fn from(serde_map: serde_json::Map<String, serde_json::Value>) -> Self {
+        Self {
+            cwd: String::from(
+                serde_map
+                    .get("cwd")
+                    .and_then(|x| x.as_str())
+                    .unwrap_or("Missing cwd when deserializing into FilerParams"),
+            ),
+            enable_icon: serde_map
+                .get("enable_icon")
+                .and_then(|x| x.as_bool())
+                .unwrap_or(false),
+        }
     }
+}
+
+pub(super) fn handle_message(msg: Message) {
+    let params: FilerParams = msg.params.into();
+
+    let result = match read_dir_entries(&params.cwd, params.enable_icon) {
+        Ok(entries) => {
+            let result = json!({
+            "entries": entries,
+            "dir": params.cwd,
+            "total": entries.len(),
+            });
+            json!({ "result": result, "id": msg.id })
+        }
+        Err(err) => {
+            let error = json!({"message": format!("{}", err), "dir": params.cwd});
+            json!({ "error": error, "id": msg.id })
+        }
+    };
+
+    write_response(result);
 }
 
 #[test]

@@ -55,13 +55,17 @@ impl CheckRelease {
                 "Current exe has to be under vim-clap/bin directory"
             ));
         }
+
         let temp_file = download::download_prebuilt_binary_to_a_tempfile(version)?;
+
         #[cfg(windows)]
         let bin_path = bin_dir.join("maple.exe");
         #[cfg(not(windows))]
         let bin_path = bin_dir.join("maple");
+
         // Move the downloaded binary to bin/maple
         std::fs::rename(temp_file, bin_path)?;
+
         Ok(())
     }
 }
