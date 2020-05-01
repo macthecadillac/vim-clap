@@ -62,19 +62,19 @@ impl From<serde_json::Map<String, serde_json::Value>> for FilerParams {
 }
 
 pub(super) fn handle_message(msg: Message) {
-    let params: FilerParams = msg.params.into();
+    let FilerParams { cwd, enable_icon } = msg.params.into();
 
-    let result = match read_dir_entries(&params.cwd, params.enable_icon) {
+    let result = match read_dir_entries(&cwd, enable_icon) {
         Ok(entries) => {
             let result = json!({
             "entries": entries,
-            "dir": params.cwd,
+            "dir": cwd,
             "total": entries.len(),
             });
             json!({ "result": result, "id": msg.id })
         }
         Err(err) => {
-            let error = json!({"message": format!("{}", err), "dir": params.cwd});
+            let error = json!({"message": format!("{}", err), "dir": cwd});
             json!({ "error": error, "id": msg.id })
         }
     };

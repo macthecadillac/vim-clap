@@ -28,6 +28,22 @@ impl Rpc {
             .expect("Failed to spawn rpc reader thread");
 
         // spawn a check release thread
+        if self.check_release {
+            thread::Builder::new()
+                .name("check_release".into())
+                .spawn(|| {
+                    if let Ok(latest_remote_release) =
+                        crate::cmd::check_release::latest_remote_release()
+                    {
+                        let version_number =
+                            crate::cmd::check_release::extract_remote_version_number(
+                                &latest_remote_release.tag_name,
+                            );
+                        write_response(json!({ "version_number": version_number }));
+                    }
+                })
+                .expect("Failed to spawn rpc reader thread");
+        }
 
         loop_handle_message(&rx);
     }
