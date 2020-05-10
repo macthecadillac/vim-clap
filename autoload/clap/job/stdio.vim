@@ -134,7 +134,7 @@ endfunction
 function! clap#job#stdio#start_rpc_service(MessageHandler) abort
   let s:MessageHandler = a:MessageHandler
   call s:start_service_job(clap#maple#build_cmd('rpc'))
-  return
+  return s:job_id
 endfunction
 
 function! clap#job#stdio#start_dyn_filter_service(MessageHandler, cmd) abort

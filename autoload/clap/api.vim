@@ -362,6 +362,11 @@ function! s:init_provider() abort
       return
     endif
     if has_key(self._(), 'on_move')
+      if !exists('g:client_job_id')
+        call clap#client#create()
+      endif
+      call clap#client#send_message_on_move()
+      return
       if s:on_move_timer != -1
         call timer_stop(s:on_move_timer)
       endif

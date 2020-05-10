@@ -10,7 +10,7 @@ function! s:peek_file(fname, fpath) abort
   let lines = readfile(a:fpath, '', 10)
   call insert(lines, a:fpath)
   call g:clap.preview.show(lines)
-  call g:clap.preview.set_syntax(clap#ext#into_filetype(a:fname))
+  noautocmd call g:clap.preview.set_syntax(clap#ext#into_filetype(a:fname))
   call clap#preview#highlight_header()
 endfunction
 

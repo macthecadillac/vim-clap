@@ -42,6 +42,7 @@ function! s:jumps.on_move() abort
 endfunction
 
 let s:jumps.syntax = 'clap_jumps'
+let s:jumps.source_type = g:__t_func_list
 let g:clap#provider#jumps# = s:jumps
 
 let &cpoptions = s:save_cpo
