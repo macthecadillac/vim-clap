@@ -105,7 +105,7 @@ pub(super) fn handle_message(msg: Message) {
             "dir": cwd,
             "total": entries.len(),
             });
-            json!({ "id": msg.id, "provider_id": "filer", "result": result })
+            json!({ "id": msg.id, "provider_id": "filer", "event": "on_init", "result": result })
         }
         Err(err) => {
             let error = json!({"message": format!("{}", err), "dir": cwd});

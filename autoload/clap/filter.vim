@@ -16,6 +16,8 @@ if has('python3') || has('python')
   endtry
 endif
 
+let s:has_py_dynamic_module = v:false
+
 if exists('g:clap_builtin_fuzzy_filter_threshold')
   let s:builtin_filter_capacity = g:clap_builtin_fuzzy_filter_threshold
 elseif s:has_py_dynamic_module

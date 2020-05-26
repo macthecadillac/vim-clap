@@ -1,6 +1,7 @@
 use super::Message;
 use anyhow::anyhow;
 use anyhow::Context;
+use pattern::extract_proj_tags;
 use std::convert::{TryFrom, TryInto};
 use std::path::PathBuf;
 
@@ -29,8 +30,9 @@ pub struct PreviewEnv {
 
 pub enum Provider {
     Files(PathBuf),
-    Filer { path: PathBuf, enable_icon: bool },
     Grep(GrepPreviewEntry),
+    Filer { path: PathBuf, enable_icon: bool },
+    ProjTags { path: PathBuf, lnum: usize },
 }
 
 impl TryFrom<Message> for PreviewEnv {
@@ -62,7 +64,7 @@ impl TryFrom<Message> for PreviewEnv {
                 .unwrap_or("Missing fname when deserializing into FilerParams"),
         );
 
-        let fname = if enable_icon {
+        let curline = if enable_icon && provider_id != "proj_tags" {
             fname_with_icon.chars().skip(2).collect()
         } else {
             fname_with_icon
@@ -77,12 +79,19 @@ impl TryFrom<Message> for PreviewEnv {
         let provider = match provider_id {
             "files" => {
                 let mut fpath: PathBuf = cwd.into();
-                fpath.push(&fname);
+                fpath.push(&curline);
                 Provider::Files(fpath)
+            }
+            "proj_tags" => {
+                let (lnum, p) =
+                    extract_proj_tags(&curline).context("Couldn't extract proj tags")?;
+                let mut path: PathBuf = cwd.into();
+                path.push(&p);
+                Provider::ProjTags { path, lnum }
             }
             "filer" => {
                 let mut path: PathBuf = cwd.into();
-                path.push(&fname);
+                path.push(&curline);
                 let enable_icon = msg
                     .params
                     .get("enable_icon")
@@ -91,7 +100,7 @@ impl TryFrom<Message> for PreviewEnv {
                 Provider::Filer { path, enable_icon }
             }
             "grep" | "grep2" => {
-                let mut preview_entry: GrepPreviewEntry = fname.try_into()?;
+                let mut preview_entry: GrepPreviewEntry = curline.try_into()?;
                 let mut with_cwd: PathBuf = cwd.into();
                 with_cwd.push(&preview_entry.fpath);
                 preview_entry.fpath = with_cwd;

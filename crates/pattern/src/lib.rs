@@ -12,6 +12,8 @@ lazy_static! {
 
   // match the tag_name:lnum of tag line.
   static ref TAG_RE: Regex = Regex::new(r"^(.*:\d+)").unwrap();
+
+  static ref PROJ_TAGS: Regex = Regex::new(r"^(.*):(\d+).*\[(.*)@(.*)\]").unwrap();
 }
 
 /// Extract tag name from the line in tags provider.
@@ -37,7 +39,7 @@ pub fn strip_grep_filepath(line: &str) -> Option<(&str, usize)> {
 
 /// Returns a tuple of (fpath, lnum, col).
 pub fn extract_grep_position(line: &str) -> Option<(PathBuf, usize, usize)> {
-    let cap = GREP_POS.captures(&line)?;
+    let cap = GREP_POS.captures(line)?;
     let fpath = cap.get(1).map(|x| x.as_str().into())?;
     let str2nr = |idx: usize| {
         cap.get(idx)
@@ -67,6 +69,16 @@ pub fn file_name_only(line: &str) -> Option<(&str, usize)> {
         .map(|fname| (&line[line.len() - fname.len()..], line.len() - fname.len()))
 }
 
+pub fn extract_proj_tags(line: &str) -> Option<(usize, &str)> {
+    let cap = PROJ_TAGS.captures(line)?;
+    let lnum = cap
+        .get(2)
+        .map(|x| x.as_str())
+        .map(|x| x.parse::<usize>().expect("\\d+ matched"))?;
+    let fpath = cap.get(4).map(|x| x.as_str())?;
+    Some((lnum, fpath))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -76,5 +88,14 @@ mod tests {
         let line = "<Backspace>:60       [map]           inoremap <silent> <buffer> <Backspace> <C-R>=clap#handler#bs_action()<CR>  ftplugin/clap_input.vim";
         let mat = TAG_RE.find(line);
         assert_eq!(mat.unwrap().as_str(), "<Backspace>:60");
+    }
+
+    #[test]
+    fn test_proj_tags_regexp() {
+        let line = r#"<C-D>:42                       [map@ftplugin/clap_input.vim]  inoremap <silent> <buffer> <expr> <C-D> col('.')>strlen(getline('.'))?"\\<Lt>C-D>":"\\<Lt>Del"#;
+        assert_eq!(
+            (42, "ftplugin/clap_input.vim"),
+            extract_proj_tags(line).unwrap()
+        );
     }
 }

@@ -49,7 +49,8 @@ fn loop_handle_message(rx: &crossbeam_channel::Receiver<String>) {
             if let Ok(msg) = serde_json::from_str::<Message>(&msg.trim()) {
                 debug!("Recv: {:?}", msg);
                 match &msg.method[..] {
-                    "filer" => filer::handle_message(msg),
+                    "client.on_init" => filer::handle_message(msg),
+                    "client.on_typed" => filer::handle_message(msg),
                     "client.on_move" => {
                         let msg_id = msg.id;
                         if let Err(e) = on_move::handle_message_on_move(msg) {

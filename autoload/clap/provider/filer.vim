@@ -37,7 +37,7 @@ function! clap#provider#filer#daemon_handle(decoded) abort
     call clap#state#refresh_matches_count(string(result.total))
     call g:clap#display_win.shrink_if_undersize()
   else
-    call clap#helper#echo_error('This should not happen, neither error nor result is found.')
+    call clap#impl#on_move#handle_file_preview(a:decoded)
   endif
 endfunction
 
@@ -78,8 +78,8 @@ function! s:goto_parent() abort
 endfunction
 
 function! s:send_message() abort
-  call clap#impl#on_move#send_params({
-        \ 'method': 'filer',
+  call clap#client#send_params({
+        \ 'method': 'client.on_typed',
         \ 'params': {'cwd': s:current_dir, 'enable_icon': s:enable_icon},
         \ })
 endfunction
@@ -244,6 +244,7 @@ function! s:start_rpc_service() abort
   let s:enable_icon = g:clap_enable_icon ? v:true : v:false
   call s:set_prompt()
   call s:send_message()
+  call clap#client#send_request_on_init({'cwd': s:current_dir, 'enable_icon': s:enable_icon, 'provider_id': 'filer'})
 endfunction
 
 let s:filer.init = function('s:start_rpc_service')

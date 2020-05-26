@@ -137,3 +137,8 @@ fn test_parse_ctags_line() {
     let tag: TagInfo = serde_json::from_str(&data).unwrap();
     assert_eq!(tag.name, "Exec");
 }
+
+#[test]
+fn test_proj_tags_regexp() {
+    let line = r#"<C-D>:42                       [map@ftplugin/clap_input.vim]  inoremap <silent> <buffer> <expr> <C-D> col('.')>strlen(getline('.'))?"\\<Lt>C-D>":"\\<Lt>Del"#;
+}
