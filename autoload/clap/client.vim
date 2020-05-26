@@ -1,6 +1,9 @@
 " Author: liuchengxu <xuliuchengxlc@gmail.com>
 " Description: Vim client for the daemon job.
 
+let s:save_cpo = &cpoptions
+set cpoptions&vim
+
 let s:req_id = get(s:, 'req_id', 0)
 " Note: must use v:true/v:false for json_encode
 let s:enable_icon = g:clap_enable_icon ? v:true : v:false
@@ -74,3 +77,6 @@ function! clap#client#handle(msg) abort
 
   call clap#impl#on_move#handle_file_preview(decoded)
 endfunction
+
+let &cpoptions = s:save_cpo
+unlet s:save_cpo
