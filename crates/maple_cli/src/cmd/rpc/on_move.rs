@@ -78,7 +78,7 @@ fn preview_directory<P: AsRef<Path>>(
     Ok(())
 }
 
-pub(super) fn handle_message_on_move(msg: Message) -> Result<()> {
+pub(super) fn handle_message(msg: Message) -> Result<()> {
     let msg_id = msg.id;
 
     let PreviewEnv { size, provider } = msg.try_into()?;

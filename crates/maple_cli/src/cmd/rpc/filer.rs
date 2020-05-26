@@ -69,9 +69,9 @@ pub(super) fn read_dir_entries<P: AsRef<Path>>(
 }
 
 #[derive(Serialize, Deserialize)]
-struct FilerParams {
-    cwd: String,
-    enable_icon: bool,
+pub(super) struct FilerParams {
+    pub cwd: String,
+    pub enable_icon: bool,
 }
 
 impl From<serde_json::Map<String, serde_json::Value>> for FilerParams {

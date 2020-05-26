@@ -1,4 +1,5 @@
 mod filer;
+mod on_init;
 mod on_move;
 mod types;
 
@@ -48,12 +49,16 @@ fn loop_handle_message(rx: &crossbeam_channel::Receiver<String>) {
             // Ignore the invalid message.
             if let Ok(msg) = serde_json::from_str::<Message>(&msg.trim()) {
                 debug!("Recv: {:?}", msg);
+                let msg_id = msg.id;
                 match &msg.method[..] {
-                    "client.on_init" => filer::handle_message(msg),
+                    "client.on_init" => {
+                        if let Err(e) = on_init::handle_message(msg) {
+                            write_response(json!({ "error": format!("{}",e), "id": msg_id }));
+                        }
+                    }
                     "client.on_typed" => filer::handle_message(msg),
                     "client.on_move" => {
-                        let msg_id = msg.id;
-                        if let Err(e) = on_move::handle_message_on_move(msg) {
+                        if let Err(e) = on_move::handle_message(msg) {
                             write_response(json!({ "error": format!("{}",e), "id": msg_id }));
                         }
                     }
