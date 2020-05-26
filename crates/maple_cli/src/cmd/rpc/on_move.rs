@@ -96,6 +96,9 @@ pub(super) fn handle_message_on_move(msg: Message) -> Result<()> {
         Provider::ProjTags { path, lnum } => {
             preview_file_at(&path, lnum, size, msg_id, "proj_tags");
         }
+        Provider::BufferTags { path, lnum } => {
+            preview_file_at(&path, lnum, size, msg_id, "tags");
+        }
         Provider::Filer { path, enable_icon } => {
             if path.is_dir() {
                 preview_directory(&path, 2 * size, enable_icon, msg_id, "filer")?;

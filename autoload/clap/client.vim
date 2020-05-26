@@ -26,7 +26,7 @@ endfunction
 function! clap#client#send_request_on_move() abort
   let s:req_id += 1
   let curline = g:clap.display.getcurline()
-  let msg = json_encode({
+  let msg = {
       \ 'id': s:req_id,
       \ 'method': 'client.on_move',
       \ 'params': {
@@ -36,8 +36,11 @@ function! clap#client#send_request_on_move() abort
       \   'provider_id': g:clap.provider.id,
       \   'preview_size': clap#preview#size_of(g:clap.provider.id),
       \ },
-      \ })
-  call clap#job#daemon#send_message(msg)
+      \ }
+  if g:clap.provider.id ==# 'tags'
+    let msg.params.source_fpath = expand('#'.g:clap.start.bufnr.':p')
+  endif
+  call clap#job#daemon#send_message(json_encode(msg))
 endfunction
 
 function! clap#client#send_params(params) abort

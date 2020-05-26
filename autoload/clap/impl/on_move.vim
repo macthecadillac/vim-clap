@@ -51,7 +51,7 @@ endfunction
 
 if clap#maple#is_available()
   function! s:dispatch_on_move_impl() abort
-    if index(['filer', 'files', 'grep', 'grep2', 'proj_tags'], g:clap.provider.id) > -1
+    if index(['filer', 'files', 'grep', 'grep2', 'proj_tags', 'tags'], g:clap.provider.id) > -1
       return clap#client#send_request_on_move()
     endif
     call s:sync_run_with_delay()

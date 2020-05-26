@@ -13,6 +13,8 @@ lazy_static! {
   // match the tag_name:lnum of tag line.
   static ref TAG_RE: Regex = Regex::new(r"^(.*:\d+)").unwrap();
 
+  static ref BUFFER_TAGS: Regex = Regex::new(r"^.*:(\d+)").unwrap();
+
   static ref PROJ_TAGS: Regex = Regex::new(r"^(.*):(\d+).*\[(.*)@(.*)\]").unwrap();
 }
 
@@ -79,6 +81,13 @@ pub fn extract_proj_tags(line: &str) -> Option<(usize, &str)> {
     Some((lnum, fpath))
 }
 
+pub fn extract_buf_tags_lnum(line: &str) -> Option<usize> {
+    let cap = BUFFER_TAGS.captures(line)?;
+    cap.get(1)
+        .map(|x| x.as_str())
+        .map(|x| x.parse::<usize>().expect("\\d+ matched"))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -97,5 +106,11 @@ mod tests {
             (42, "ftplugin/clap_input.vim"),
             extract_proj_tags(line).unwrap()
         );
+    }
+
+    #[test]
+    fn test_buffer_tags_regexp() {
+        let line = r#" extract_fpath_from_grep_line:58  [function]  pub fn extract_fpath_from_grep_line(line: &str) -> Option<&str> {"#;
+        println!("{:?}", extract_buf_tags_lnum(line));
     }
 }

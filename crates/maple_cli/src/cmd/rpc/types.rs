@@ -1,7 +1,7 @@
 use super::Message;
 use anyhow::anyhow;
 use anyhow::Context;
-use pattern::extract_proj_tags;
+use pattern::{extract_buf_tags_lnum, extract_proj_tags};
 use std::convert::{TryFrom, TryInto};
 use std::path::PathBuf;
 
@@ -33,6 +33,7 @@ pub enum Provider {
     Grep(GrepPreviewEntry),
     Filer { path: PathBuf, enable_icon: bool },
     ProjTags { path: PathBuf, lnum: usize },
+    BufferTags { path: PathBuf, lnum: usize },
 }
 
 impl TryFrom<Message> for PreviewEnv {
@@ -82,6 +83,17 @@ impl TryFrom<Message> for PreviewEnv {
                 fpath.push(&curline);
                 Provider::Files(fpath)
             }
+            "tags" => {
+                let lnum =
+                    extract_buf_tags_lnum(&curline).context("Couldn't extract buffer tags")?;
+                let path = msg
+                    .params
+                    .get("source_fpath")
+                    .and_then(|x| x.as_str().map(Into::into))
+                    .context("Missing fname when deserializing into FilerParams")?;
+                Provider::BufferTags { path, lnum }
+            }
+
             "proj_tags" => {
                 let (lnum, p) =
                     extract_proj_tags(&curline).context("Couldn't extract proj tags")?;
