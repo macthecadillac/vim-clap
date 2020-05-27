@@ -88,6 +88,12 @@ pub fn extract_buf_tags_lnum(line: &str) -> Option<usize> {
         .map(|x| x.parse::<usize>().expect("\\d+ matched"))
 }
 
+pub fn extract_blines_lnum(line: &str) -> Option<usize> {
+    line.split_whitespace()
+        .next()
+        .map(|x| x.parse::<usize>().expect("\\d+ matched"))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -112,5 +118,11 @@ mod tests {
     fn test_buffer_tags_regexp() {
         let line = r#" extract_fpath_from_grep_line:58  [function]  pub fn extract_fpath_from_grep_line(line: &str) -> Option<&str> {"#;
         println!("{:?}", extract_buf_tags_lnum(line));
+    }
+
+    #[test]
+    fn test_blines_lnum() {
+        let line = r#" 103       call clap#helper#echo_error('Provider without source must specify on_moved, but only has: '.keys(provider_info))"#;
+        println!("{:?}", extract_blines_lnum(line));
     }
 }

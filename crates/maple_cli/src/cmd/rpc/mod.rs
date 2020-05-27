@@ -45,11 +45,11 @@ fn loop_read(reader: impl BufRead, sink: &Sender<String>) {
 
 fn loop_handle_message(rx: &crossbeam_channel::Receiver<String>) {
     for msg in rx.iter() {
-        thread::spawn(move || {
-            // Ignore the invalid message.
-            if let Ok(msg) = serde_json::from_str::<Message>(&msg.trim()) {
+        // Ignore the invalid message.
+        if let Ok(msg) = serde_json::from_str::<Message>(&msg.trim()) {
+            let msg_id = msg.id;
+            if let Err(err) = thread::Builder::new().name(format!("msg-handler-{}", msg_id)).spawn(move || {
                 debug!("Recv: {:?}", msg);
-                let msg_id = msg.id;
                 match &msg.method[..] {
                     "client.on_init" => {
                         if let Err(e) = on_init::handle_message(msg) {
@@ -65,11 +65,12 @@ fn loop_handle_message(rx: &crossbeam_channel::Receiver<String>) {
                     _ => write_response(
                         json!({ "error": format!("unknown method: {}", &msg.method[..]), "id": msg.id }),
                     ),
-                }
-            } else {
-                error!("Invalid message: {:?}", msg);
+                }}) {
+            error!("Failed to spawn for message-{}, error:{:?}", msg_id, err);
             }
-        });
+        } else {
+            error!("Invalid message: {:?}", msg);
+        };
     }
 }
 

@@ -1,7 +1,7 @@
 use super::Message;
 use anyhow::anyhow;
 use anyhow::Context;
-use pattern::{extract_buf_tags_lnum, extract_proj_tags};
+use pattern::{extract_blines_lnum, extract_buf_tags_lnum, extract_proj_tags};
 use std::convert::{TryFrom, TryInto};
 use std::path::PathBuf;
 
@@ -34,6 +34,7 @@ pub enum Provider {
     Filer { path: PathBuf, enable_icon: bool },
     ProjTags { path: PathBuf, lnum: usize },
     BufferTags { path: PathBuf, lnum: usize },
+    BLines { path: PathBuf, lnum: usize },
 }
 
 impl TryFrom<Message> for PreviewEnv {
@@ -65,7 +66,7 @@ impl TryFrom<Message> for PreviewEnv {
                 .unwrap_or("Missing fname when deserializing into FilerParams"),
         );
 
-        let curline = if enable_icon && provider_id != "proj_tags" {
+        let curline = if enable_icon && provider_id != "proj_tags" && provider_id != "blines" {
             fname_with_icon.chars().skip(2).collect()
         } else {
             fname_with_icon
@@ -82,6 +83,17 @@ impl TryFrom<Message> for PreviewEnv {
                 let mut fpath: PathBuf = cwd.into();
                 fpath.push(&curline);
                 Provider::Files(fpath)
+            }
+            "blines" => {
+                log::debug!("curline:{}", curline);
+                let lnum = extract_blines_lnum(&curline).context("Couldn't extract buffer lnum")?;
+                log::debug!("blines lnum:{}", lnum);
+                let path = msg
+                    .params
+                    .get("source_fpath")
+                    .and_then(|x| x.as_str().map(Into::into))
+                    .context("Missing fname when deserializing into FilerParams")?;
+                Provider::BLines { path, lnum }
             }
             "tags" => {
                 let lnum =

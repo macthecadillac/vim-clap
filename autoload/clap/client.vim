@@ -40,7 +40,7 @@ function! clap#client#send_request_on_move() abort
       \   'preview_size': clap#preview#size_of(g:clap.provider.id),
       \ },
       \ }
-  if g:clap.provider.id ==# 'tags'
+  if g:clap.provider.id ==# 'tags' || g:clap.provider.id ==# 'blines'
     let msg.params.source_fpath = expand('#'.g:clap.start.bufnr.':p')
   endif
   call clap#job#daemon#send_message(json_encode(msg))

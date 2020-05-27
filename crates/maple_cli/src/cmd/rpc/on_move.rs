@@ -27,6 +27,7 @@ fn preview_file_at<P: AsRef<Path>>(
             let lines = std::iter::once(fname.clone())
                 .chain(lines_iter)
                 .collect::<Vec<_>>();
+            log::debug!("sending msg_id:{}, provider_id:{}", msg_id, provider_id);
             write_response(
                 json!({ "id": msg_id, "provider_id": provider_id, "event": "on_move", "lines": lines, "fname": fname, "hi_lnum": hi_lnum }),
             );
@@ -98,6 +99,10 @@ pub(super) fn handle_message(msg: Message) -> Result<()> {
         }
         Provider::BufferTags { path, lnum } => {
             preview_file_at(&path, lnum, size, msg_id, "tags");
+        }
+        Provider::BLines { path, lnum } => {
+            log::debug!("path:{}, lnum:{}", path.display(), lnum);
+            preview_file_at(&path, lnum, size, msg_id, "blines");
         }
         Provider::Filer { path, enable_icon } => {
             if path.is_dir() {
