@@ -68,6 +68,10 @@ pub struct Maple {
     #[structopt(long = "no-cache")]
     pub no_cache: bool,
 
+    /// Do not use the cached file for exec subcommand.
+    #[structopt(long = "no-log")]
+    pub no_log: bool,
+
     /// Enable the logging system.
     #[structopt(long = "log", parse(from_os_str))]
     pub log: Option<std::path::PathBuf>,
@@ -78,10 +82,12 @@ pub struct Maple {
 
 impl Maple {
     pub fn run(self) -> Result<()> {
-        if let Some(ref log_path) = self.log {
-            crate::logger::init(log_path)?;
-        } else if let Ok(log_path) = std::env::var("VIM_CLAP_LOG_FILE") {
-            crate::logger::init(log_path)?;
+        if !self.no_log {
+            if let Some(ref log_path) = self.log {
+                crate::logger::init(log_path)?;
+            } else if let Ok(log_path) = std::env::var("VIM_CLAP_LOG_FILE") {
+                crate::logger::init(log_path)?;
+            }
         }
 
         match self.command {

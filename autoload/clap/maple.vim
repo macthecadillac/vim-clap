@@ -254,10 +254,15 @@ function! clap#maple#run_sync_grep(cmd, query, enable_icon, glob) abort
 endfunction
 
 function! clap#maple#build_cmd(...) abort
+  return [s:maple_bin, '--no-log'] + a:000
+endfunction
+
+function! clap#maple#build_cmd_with_log(...) abort
   return [s:maple_bin] + a:000
 endfunction
 
 function! clap#maple#build_cmd_list(cmd_list) abort
+  call insert(a:cmd_list, '--no-log')
   return insert(a:cmd_list, s:maple_bin)
 endfunction
 

@@ -17,6 +17,20 @@ function! clap#client#send_request_on_init(params) abort
         \ }))
 endfunction
 
+function! clap#client#send_request_on_init_default_impl() abort
+  let s:req_id += 1
+  call clap#job#daemon#send_message(json_encode({
+        \ 'id': s:req_id,
+        \ 'method': 'client.on_init',
+        \ 'params': {
+        \   'cwd': g:clap.provider.id ==# 'filer' ? clap#provider#filer#current_dir() : clap#rooter#working_dir(),
+        \   'enable_icon': s:enable_icon,
+        \   'provider_id': g:clap.provider.id,
+        \   'preview_size': clap#preview#size_of(g:clap.provider.id),
+        \ },
+        \ }))
+endfunction
+
 function! clap#client#send_request_on_typed(params) abort
   let s:req_id += 1
   call clap#job#daemon#send_message(json_encode({
