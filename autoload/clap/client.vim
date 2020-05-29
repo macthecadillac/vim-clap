@@ -17,6 +17,16 @@ function! clap#client#send_request_on_init(params) abort
         \ }))
 endfunction
 
+function! s:provider_source_cmd() abort
+  if g:clap.provider.source_type == g:__t_string
+    return g:clap.provider._().source
+  elseif g:clap.provider.source_type == g:__t_func_string
+    return g:clap.provider._().source()
+  else
+    return ''
+  endif
+endfunction
+
 function! clap#client#send_request_on_init_default_impl() abort
   let s:req_id += 1
   call clap#job#daemon#send_message(json_encode({
@@ -27,6 +37,7 @@ function! clap#client#send_request_on_init_default_impl() abort
         \   'enable_icon': s:enable_icon,
         \   'provider_id': g:clap.provider.id,
         \   'preview_size': clap#preview#size_of(g:clap.provider.id),
+        \   'source_cmd': s:provider_source_cmd(),
         \ },
         \ }))
 endfunction
@@ -86,6 +97,11 @@ function! clap#client#handle(msg) abort
     else
       call clap#provider#filer#daemon_handle(decoded)
     endif
+    return
+  endif
+
+  if decoded.event ==# 'on_init'
+    call g:clap.display.set_lines(decoded.lines)
     return
   endif
 

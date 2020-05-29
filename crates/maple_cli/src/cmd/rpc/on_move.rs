@@ -1,17 +1,16 @@
 use super::types::{PreviewEnv, Provider};
 use super::*;
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use log::error;
 use std::convert::TryInto;
 use std::path::Path;
 
 #[inline]
-fn canonicalize_and_as_str<P: AsRef<Path>>(path: P) -> String {
-    std::fs::canonicalize(path)
-        .unwrap()
+fn canonicalize_and_as_str<P: AsRef<Path>>(path: P) -> Result<String> {
+    std::fs::canonicalize(path.as_ref())?
         .into_os_string()
         .into_string()
-        .unwrap()
+        .map_err(|e| anyhow!("{:?}, path:{}", e, path.as_ref().display()))
 }
 
 fn preview_file_at<P: AsRef<Path>>(
@@ -43,8 +42,13 @@ fn preview_file_at<P: AsRef<Path>>(
     }
 }
 
-fn preview_file<P: AsRef<Path>>(path: P, size: usize, msg_id: u64, provider_id: &str) {
-    let abs_path = canonicalize_and_as_str(path.as_ref());
+fn preview_file<P: AsRef<Path>>(
+    path: P,
+    size: usize,
+    msg_id: u64,
+    provider_id: &str,
+) -> Result<()> {
+    let abs_path = canonicalize_and_as_str(path.as_ref())?;
     let lines_iter = match crate::utils::read_first_lines(path.as_ref(), size) {
         Ok(i) => i,
         Err(e) => {
@@ -54,7 +58,7 @@ fn preview_file<P: AsRef<Path>>(path: P, size: usize, msg_id: u64, provider_id: 
                 path.as_ref().display(),
                 e
             );
-            return;
+            return Err(anyhow!("{:?}", e));
         }
     };
     let lines = std::iter::once(abs_path.clone())
@@ -63,6 +67,7 @@ fn preview_file<P: AsRef<Path>>(path: P, size: usize, msg_id: u64, provider_id: 
     write_response(
         json!({ "id": msg_id, "provider_id": provider_id, "event": "on_move", "lines": lines, "fname": abs_path }),
     );
+    Ok(())
 }
 
 fn preview_directory<P: AsRef<Path>>(
@@ -108,11 +113,11 @@ pub(super) fn handle_message(msg: Message) -> Result<()> {
             if path.is_dir() {
                 preview_directory(&path, 2 * size, enable_icon, msg_id, "filer")?;
             } else {
-                preview_file(&path, 2 * size, msg_id, "filer");
+                preview_file(&path, 2 * size, msg_id, "filer")?;
             }
         }
         Provider::Files(fpath) => {
-            preview_file(&fpath, 2 * size, msg_id, "files");
+            preview_file(&fpath, 2 * size, msg_id, "files")?;
         }
     }
 
