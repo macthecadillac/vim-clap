@@ -65,7 +65,7 @@ pub enum SessionEvent {
 }
 
 /// Ensure GLOBAL_ENV has been instalized before using it.
-pub fn env() -> impl Deref<Target = GlobalEnv> {
+pub fn global_env() -> impl Deref<Target = GlobalEnv> {
     if let Some(x) = GLOBAL_ENV.get() {
         x
     } else if cfg!(debug_assertions) {
@@ -76,10 +76,10 @@ pub fn env() -> impl Deref<Target = GlobalEnv> {
 }
 
 pub fn preview_size_of(provider_id: &str) -> usize {
-    env().preview_size_of(provider_id)
+    global_env().preview_size_of(provider_id)
 }
 
-fn initialize_env(msg: Message) -> anyhow::Result<()> {
+fn initialize_global_env(msg: Message) -> anyhow::Result<()> {
     let is_nvim = msg
         .params
         .get("is_nvim")
@@ -95,7 +95,7 @@ fn initialize_env(msg: Message) -> anyhow::Result<()> {
     let preview_size = msg
         .params
         .get("clap_preview_size")
-        .expect("Missing clap_preview_size on initialize_env");
+        .expect("Missing clap_preview_size on initialize_global_env");
 
     let global_env = GlobalEnv::new(is_nvim, enable_icon, preview_size.clone());
 
@@ -114,7 +114,7 @@ fn spawn_handle_thread(msg: Message) -> anyhow::Result<()> {
         .name(format!("msg-handle-{}", msg_id))
         .spawn(move || {
             let handle_result = match &msg.method[..] {
-                "client.initialize_env" => initialize_env(msg),
+                "initialize_global_env" => initialize_global_env(msg),
                 "client.on_init" => on_init::handle_message(msg),
                 "client.on_typed" => filer::handle_message(msg),
                 "client.on_move" => on_move::handle_message(msg),

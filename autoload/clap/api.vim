@@ -564,6 +564,7 @@ function! s:init_provider() abort
   function! provider.init_display_win() abort
     if has_key(self._(), 'init')
       call self._().init()
+      call clap#client#send_request_on_init_inner()
     else
       if g:clap.provider.id ==# 'files'
         call clap#client#send_request_on_init_default_impl()

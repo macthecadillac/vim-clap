@@ -120,7 +120,7 @@ pub(super) fn handle_message(msg: Message) -> Result<()> {
         }
         Provider::Filer { path } => {
             if path.is_dir() {
-                preview_directory(&path, 2 * size, env().enable_icon, msg_id, "filer")?;
+                preview_directory(&path, 2 * size, global_env().enable_icon, msg_id, "filer")?;
             } else {
                 preview_file(&path, 2 * size, msg_id, "filer")?;
             }

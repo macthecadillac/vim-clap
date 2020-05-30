@@ -78,7 +78,7 @@ fn has_icon_support(provider_id: &str) -> bool {
 }
 
 fn should_skip_leading_icon(provider_id: &str) -> bool {
-    super::env().enable_icon && has_icon_support(provider_id)
+    super::global_env().enable_icon && has_icon_support(provider_id)
 }
 
 impl TryFrom<Message> for PreviewEnv {

@@ -12,7 +12,7 @@ function! clap#client#send_request_initilize_env() abort
   let s:req_id += 1
   call clap#job#daemon#send_message(json_encode({
         \ 'id': s:req_id,
-        \ 'method': 'client.initialize_env',
+        \ 'method': 'initialize_global_env',
         \ 'params': {
         \   'is_nvim': has('nvim') ? v:true : v:false,
         \   'enable_icon': s:enable_icon,
@@ -47,13 +47,24 @@ function! clap#client#send_request_on_init_default_impl() abort
         \ 'method': 'client.on_init',
         \ 'params': {
         \   'cwd': g:clap.provider.id ==# 'filer' ? clap#provider#filer#current_dir() : clap#rooter#working_dir(),
-        \   'enable_icon': s:enable_icon,
         \   'provider_id': g:clap.provider.id,
-        \   'preview_size': clap#preview#size_of(g:clap.provider.id),
         \   'source_cmd': s:provider_source_cmd(),
         \ },
         \ }))
 endfunction
+
+function! clap#client#send_request_on_init_inner() abort
+  let s:req_id += 1
+  call clap#job#daemon#send_message(json_encode({
+        \ 'id': s:req_id,
+        \ 'method': 'client.on_init',
+        \ 'params': {
+        \   'cwd': g:clap.provider.id ==# 'filer' ? clap#provider#filer#current_dir() : clap#rooter#working_dir(),
+        \   'provider_id': g:clap.provider.id,
+        \ },
+        \ }))
+endfunction
+
 
 function! clap#client#send_request_on_typed(params) abort
   let s:req_id += 1
