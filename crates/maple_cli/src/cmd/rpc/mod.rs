@@ -81,7 +81,49 @@ pub fn preview_size_of(provider_id: &str) -> usize {
     env().preview_size_of(provider_id)
 }
 
+fn initialize_env(msg: Message) -> anyhow::Result<()> {
+    let enable_icon = msg
+        .params
+        .get("enable_icon")
+        .and_then(|x| x.as_bool())
+        .unwrap_or(false);
+    let preview_size = msg
+        .params
+        .get("clap_preview_size")
+        .expect("Missing clap_preview_size on initialize_env");
+
+    let global_env = GlobalEnv::new(enable_icon, preview_size.clone());
+
+    if let Err(e) = GLOBAL_ENV.set(global_env) {
+        debug!("failed to initialized GLOBAL_ENV, error: {:?}", e);
+    } else {
+        debug!("GLOBAL_ENV initialized successfully");
+    }
+    Ok(())
+}
+
+fn spawn_handle_thread(msg: Message) -> anyhow::Result<()> {
+    let msg_id = msg.id;
+    thread::Builder::new()
+        .name(format!("msg-handle-{}", msg_id))
+        .spawn(move || {
+            let handle_result = match &msg.method[..] {
+                "client.initialize_env" => initialize_env(msg),
+                "client.on_init" => on_init::handle_message(msg),
+                "client.on_typed" => filer::handle_message(msg),
+                "client.on_move" => on_move::handle_message(msg),
+                _ => Err(anyhow::anyhow!("Unknonw method: {}", msg.method)),
+            };
+
+            if let Err(e) = handle_result {
+                write_response(json!({ "error": format!("{}",e), "id": msg_id }));
+            }
+        })?;
+    Ok(())
+}
+
 // stdio channel
+//
 //  process SessionEvent
 //     ->
 //
@@ -89,43 +131,19 @@ pub fn preview_size_of(provider_id: &str) -> usize {
 // on_typed => send message via channel to Session(Provider)
 // on_move
 fn loop_handle_message(rx: &crossbeam_channel::Receiver<String>) {
-    for msg in rx.iter() {
+    for message in rx.iter() {
         // Ignore the invalid message.
-        if let Ok(msg) = serde_json::from_str::<Message>(&msg.trim()) {
+        if let Ok(msg) = serde_json::from_str::<Message>(&message.trim()) {
+            debug!("Recv: {:?}", msg);
             let msg_id = msg.id;
-
-            if let Err(err) = thread::Builder::new().name(format!("msg-handler-{}", msg_id)).spawn(move || {
-                debug!("Recv: {:?}", msg);
-                match &msg.method[..] {
-                    "client.initialize_env" => {
-                      let enable_icon = msg.params.get("enable_icon") .and_then(|x| x.as_bool()) .unwrap_or(false);
-                      let preview_size = msg .params .get("clap_preview_size").expect("Missing clap_preview_size on initialize_env");
-
-                      let global_env = GlobalEnv::new(enable_icon, preview_size.clone());
-                      match GLOBAL_ENV.set(global_env) {
-                        Ok(_) => debug!("GLOBAL_ENV initialized successfully"),
-                        Err(e) => debug!("failed to initialized GLOBAL_ENV, error: {:?}", e)
-                      }
-                    }
-                    "client.on_init" => {
-                        if let Err(e) = on_init::handle_message(msg) {
-                            write_response(json!({ "error": format!("{}",e), "id": msg_id }));
-                        }
-                    }
-                    "client.on_typed" => filer::handle_message(msg),
-                    "client.on_move" => {
-                        if let Err(e) = on_move::handle_message(msg) {
-                            write_response(json!({ "error": format!("{}",e), "id": msg_id }));
-                        }
-                    }
-                    _ => write_response(
-                        json!({ "error": format!("unknown method: {}", &msg.method[..]), "id": msg.id }),
-                    ),
-                }}) {
-            error!("Failed to spawn for message-{}, error:{:?}", msg_id, err);
+            if let Err(err) = spawn_handle_thread(msg) {
+                error!(
+                    "Failed to spawn thread msg-handle-{}, error:{:?}",
+                    msg_id, err
+                );
             }
         } else {
-            error!("Invalid message: {:?}", msg);
+            error!("Received invalid message: {:?}", message);
         };
     }
 }
