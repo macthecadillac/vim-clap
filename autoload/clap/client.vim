@@ -14,6 +14,7 @@ function! clap#client#send_request_initilize_env() abort
         \ 'id': s:req_id,
         \ 'method': 'client.initialize_env',
         \ 'params': {
+        \   'is_nvim': has('nvim') ? v:true : v:false,
         \   'enable_icon': s:enable_icon,
         \   'clap_preview_size': g:clap_preview_size,
         \ }

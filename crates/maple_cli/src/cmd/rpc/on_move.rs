@@ -118,9 +118,9 @@ pub(super) fn handle_message(msg: Message) -> Result<()> {
             log::debug!("path:{}, lnum:{}", path.display(), lnum);
             preview_file_at(&path, lnum, size, msg_id, "blines");
         }
-        Provider::Filer { path, enable_icon } => {
+        Provider::Filer { path } => {
             if path.is_dir() {
-                preview_directory(&path, 2 * size, enable_icon, msg_id, "filer")?;
+                preview_directory(&path, 2 * size, env().enable_icon, msg_id, "filer")?;
             } else {
                 preview_file(&path, 2 * size, msg_id, "filer")?;
             }

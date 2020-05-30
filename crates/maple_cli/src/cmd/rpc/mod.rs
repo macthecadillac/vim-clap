@@ -9,6 +9,7 @@ use once_cell::sync::OnceCell;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::io::prelude::*;
+use std::ops::Deref;
 use std::thread;
 use types::GlobalEnv;
 
@@ -63,17 +64,14 @@ pub enum SessionEvent {
     OnMove(Message),
 }
 
-use std::ops::Deref;
-
+/// Ensure GLOBAL_ENV has been instalized before using it.
 pub fn env() -> impl Deref<Target = GlobalEnv> {
     if let Some(x) = GLOBAL_ENV.get() {
         x
+    } else if cfg!(debug_assertions) {
+        panic!("Uninitalized static: GLOBAL_ENV")
     } else {
-        if cfg!(debug_assertions) {
-            panic!("uninit static: FOO")
-        } else {
-            unsafe { std::hint::unreachable_unchecked() }
-        }
+        unreachable!("Never forget to intialize before using it!")
     }
 }
 
@@ -82,23 +80,31 @@ pub fn preview_size_of(provider_id: &str) -> usize {
 }
 
 fn initialize_env(msg: Message) -> anyhow::Result<()> {
+    let is_nvim = msg
+        .params
+        .get("is_nvim")
+        .and_then(|x| x.as_bool())
+        .unwrap_or(false);
+
     let enable_icon = msg
         .params
         .get("enable_icon")
         .and_then(|x| x.as_bool())
         .unwrap_or(false);
+
     let preview_size = msg
         .params
         .get("clap_preview_size")
         .expect("Missing clap_preview_size on initialize_env");
 
-    let global_env = GlobalEnv::new(enable_icon, preview_size.clone());
+    let global_env = GlobalEnv::new(is_nvim, enable_icon, preview_size.clone());
 
     if let Err(e) = GLOBAL_ENV.set(global_env) {
         debug!("failed to initialized GLOBAL_ENV, error: {:?}", e);
     } else {
         debug!("GLOBAL_ENV initialized successfully");
     }
+
     Ok(())
 }
 
