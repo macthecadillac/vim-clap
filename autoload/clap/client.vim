@@ -8,6 +8,18 @@ let s:req_id = get(s:, 'req_id', 0)
 " Note: must use v:true/v:false for json_encode
 let s:enable_icon = g:clap_enable_icon ? v:true : v:false
 
+function! clap#client#send_request_initilize_env() abort
+  let s:req_id += 1
+  call clap#job#daemon#send_message(json_encode({
+        \ 'id': s:req_id,
+        \ 'method': 'client.initialize_env',
+        \ 'params': {
+        \   'enable_icon': s:enable_icon,
+        \   'clap_preview_size': g:clap_preview_size,
+        \ }
+        \ }))
+endfunction
+
 function! clap#client#send_request_on_init(params) abort
   let s:req_id += 1
   call clap#job#daemon#send_message(json_encode({
@@ -60,9 +72,7 @@ function! clap#client#send_request_on_move() abort
       \ 'params': {
       \   'cwd': g:clap.provider.id ==# 'filer' ? clap#provider#filer#current_dir() : clap#rooter#working_dir(),
       \   'curline': curline,
-      \   'enable_icon': s:enable_icon,
       \   'provider_id': g:clap.provider.id,
-      \   'preview_size': clap#preview#size_of(g:clap.provider.id),
       \ },
       \ }
   if g:clap.provider.id ==# 'tags' || g:clap.provider.id ==# 'blines'

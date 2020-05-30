@@ -1,6 +1,6 @@
 use super::types::{PreviewEnv, Provider};
 use super::*;
-use anyhow::{anyhow, Result};
+use anyhow::{anyhow, Context, Result};
 use log::error;
 use std::convert::TryInto;
 use std::path::Path;
@@ -87,7 +87,16 @@ fn preview_directory<P: AsRef<Path>>(
 pub(super) fn handle_message(msg: Message) -> Result<()> {
     let msg_id = msg.id;
 
-    let PreviewEnv { size, provider } = msg.try_into()?;
+    let msg_cloned = msg.clone();
+    let provider_id = msg_cloned
+        .params
+        .get("provider_id")
+        .and_then(|x| x.as_str())
+        .context("Unknown provider_id")?;
+
+    let PreviewEnv { provider } = msg.try_into()?;
+
+    let size = preview_size_of(provider_id);
 
     match provider {
         Provider::Grep(preview_entry) => {
