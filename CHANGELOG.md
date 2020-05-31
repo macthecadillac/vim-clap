@@ -3,6 +3,10 @@ CHANGELOG
 
 ## [unreleased]
 
+### Improved
+
+- Try loading the clap theme having a same name with the current colorscheme when `g:clap_theme` does not exist.
+
 ### Added
 
 - Add `g:clap_preview_size` for configuring the number of preview lines. ([#444](https://github.com/liuchengxu/vim-clap/pull/444))
@@ -18,6 +22,7 @@ CHANGELOG
 
 ### Added
 
+- Add `g:clap_provider_yanks_history`. ([#438](https://github.com/liuchengxu/vim-clap/pull/438))
 - Async `on_move` impl for `filer`, `files`, `grep` and `grep2` provider in Rust binary, no delay for the preview function. ([#437](https://github.com/liuchengxu/vim-clap/pull/437))
 
 ### Changed
