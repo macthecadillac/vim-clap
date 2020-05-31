@@ -101,9 +101,19 @@ endif
 function! clap#layout#calc() abort
   if exists('g:clap_layout')
     call s:validate(g:clap_layout)
-    return s:user_layout()
+    let s:layout = s:user_layout()
+    return s:layout
   else
-    return s:calc_default()
+    let s:layout = s:calc_default()
+    return s:layout
+  endif
+endfunction
+
+function! clap#layout#get() abort
+  if exists('s:layout')
+    return s:layout
+  else
+    return clap#layout#calc()
   endif
 endfunction
 

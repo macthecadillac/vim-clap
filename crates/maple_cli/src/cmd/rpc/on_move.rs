@@ -1,6 +1,6 @@
 use super::types::{PreviewEnv, Provider};
 use super::*;
-use anyhow::{anyhow, Result};
+use anyhow::{anyhow, Context, Result};
 use log::error;
 use std::convert::TryInto;
 use std::path::Path;
@@ -87,7 +87,16 @@ fn preview_directory<P: AsRef<Path>>(
 pub(super) fn handle_message(msg: Message) -> Result<()> {
     let msg_id = msg.id;
 
-    let PreviewEnv { size, provider } = msg.try_into()?;
+    let msg_cloned = msg.clone();
+    let provider_id = msg_cloned
+        .params
+        .get("provider_id")
+        .and_then(|x| x.as_str())
+        .context("Unknown provider_id")?;
+
+    let PreviewEnv { provider } = msg.try_into()?;
+
+    let size = preview_size_of(provider_id);
 
     match provider {
         Provider::Grep(preview_entry) => {
@@ -109,9 +118,9 @@ pub(super) fn handle_message(msg: Message) -> Result<()> {
             log::debug!("path:{}, lnum:{}", path.display(), lnum);
             preview_file_at(&path, lnum, size, msg_id, "blines");
         }
-        Provider::Filer { path, enable_icon } => {
+        Provider::Filer { path } => {
             if path.is_dir() {
-                preview_directory(&path, 2 * size, enable_icon, msg_id, "filer")?;
+                preview_directory(&path, 2 * size, global_env().enable_icon, msg_id, "filer")?;
             } else {
                 preview_file(&path, 2 * size, msg_id, "filer")?;
             }
