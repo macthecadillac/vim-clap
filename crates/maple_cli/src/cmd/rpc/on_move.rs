@@ -1,94 +1,110 @@
 use super::types::{PreviewEnv, Provider};
 use super::*;
-use anyhow::Result;
-use log::error;
+use anyhow::{anyhow, Context, Result};
+use log::{debug, error};
 use std::convert::TryInto;
 use std::path::Path;
 
 #[inline]
-fn canonicalize_and_as_str<P: AsRef<Path>>(path: P) -> String {
-    std::fs::canonicalize(path)
-        .unwrap()
+fn as_absolute_path<P: AsRef<Path>>(path: P) -> Result<String> {
+    std::fs::canonicalize(path.as_ref())?
         .into_os_string()
         .into_string()
-        .unwrap()
+        .map_err(|e| anyhow!("{:?}, path:{}", e, path.as_ref().display()))
 }
 
-pub(super) fn handle_message_on_move(msg: Message) -> Result<()> {
+fn apply_preview_file_at<P: AsRef<Path>>(
+    path: P,
+    lnum: usize,
+    size: usize,
+    msg_id: u64,
+    provider_id: &str,
+) {
+    match crate::utils::read_preview_lines(path.as_ref(), lnum, size) {
+        Ok((lines_iter, hi_lnum)) => {
+            let fname = format!("{}", path.as_ref().display());
+            let lines = std::iter::once(fname.clone())
+                .chain(lines_iter)
+                .collect::<Vec<_>>();
+            debug!("sending msg_id:{}, provider_id:{}", msg_id, provider_id);
+            write_response(
+                json!({ "id": msg_id, "provider_id": provider_id, "event": "on_move", "lines": lines, "fname": fname, "hi_lnum": hi_lnum }),
+            );
+        }
+        Err(err) => {
+            error!(
+                "[{}]Couldn't read first lines of {}, error: {:?}",
+                provider_id,
+                path.as_ref().display(),
+                err
+            );
+        }
+    }
+}
+
+fn apply_preview_file<P: AsRef<Path>>(
+    path: P,
+    size: usize,
+    msg_id: u64,
+    provider_id: &str,
+) -> Result<()> {
+    let abs_path = as_absolute_path(path.as_ref())?;
+    let lines_iter = crate::utils::read_first_lines(path.as_ref(), size)?;
+    let lines = std::iter::once(abs_path.clone())
+        .chain(lines_iter)
+        .collect::<Vec<_>>();
+    write_response(
+        json!({ "id": msg_id, "provider_id": provider_id, "event": "on_move", "lines": lines, "fname": abs_path }),
+    );
+    Ok(())
+}
+
+fn preview_directory<P: AsRef<Path>>(
+    path: P,
+    size: usize,
+    enable_icon: bool,
+    msg_id: u64,
+    provider_id: &str,
+) -> Result<()> {
+    let lines = super::filer::read_dir_entries(&path, enable_icon, Some(size))?;
+    write_response(
+        json!({ "id": msg_id, "provider_id": provider_id, "event": "on_move", "lines": lines, "is_dir": true }),
+    );
+    Ok(())
+}
+
+pub(super) fn handle_message(msg: Message) -> Result<()> {
+    let msg_cloned = msg.clone();
+    let provider_id = msg_cloned
+        .params
+        .get("provider_id")
+        .and_then(|x| x.as_str())
+        .context("Unknown provider_id")?;
+
+    let size = preview_size_of(provider_id);
     let msg_id = msg.id;
 
-    let PreviewEnv { size, provider } = msg.try_into()?;
+    let preview_file = |path: &Path| apply_preview_file(&path, 2 * size, msg_id, provider_id);
 
-    let file_preview_impl = |path: &Path| {
-        crate::utils::read_first_lines(path, 2 * size).map(|lines_iter| {
-            let abs_path = canonicalize_and_as_str(path);
-            (
-                std::iter::once(abs_path.clone())
-                    .chain(lines_iter)
-                    .collect::<Vec<_>>(),
-                abs_path,
-            )
-        })
-    };
+    let preview_file_at =
+        |path: &Path, lnum: usize| apply_preview_file_at(&path, lnum, size, msg_id, provider_id);
+
+    let PreviewEnv { provider } = msg.try_into()?;
 
     match provider {
-        Provider::Grep(preview_entry) => {
-            match crate::utils::read_preview_lines(&preview_entry.fpath, preview_entry.lnum, size) {
-                Ok((lines_iter, hi_lnum)) => {
-                    let fname = format!("{}", preview_entry.fpath.display());
-                    let lines = std::iter::once(fname.clone())
-                        .chain(lines_iter)
-                        .collect::<Vec<_>>();
-                    write_response(
-                        json!({ "id": msg_id, "provider_id": "grep", "lines": lines, "fname": fname, "hi_lnum": hi_lnum }),
-                    );
-                }
-                Err(err) => {
-                    error!(
-                        "[grep]Couldn't read first lines of {}, error: {:?}",
-                        preview_entry.fpath.display(),
-                        err
-                    );
-                }
-            }
+        Provider::BLines { path, lnum }
+        | Provider::Grep { path, lnum }
+        | Provider::ProjTags { path, lnum }
+        | Provider::BufferTags { path, lnum } => {
+            debug!("path:{}, lnum:{}", path.display(), lnum);
+            preview_file_at(&path, lnum);
         }
-        Provider::Filer { path, enable_icon } => {
-            if path.is_dir() {
-                let lines = super::filer::read_dir_entries(&path, enable_icon, Some(2 * size))?;
-                write_response(
-                    json!({ "id": msg_id, "provider_id": "filer", "type": "preview", "lines": lines, "is_dir": true }),
-                );
-            } else {
-                match file_preview_impl(&path) {
-                    Ok((lines, abs_path)) => {
-                        write_response(
-                            json!({ "id": msg_id, "provider_id": "filer", "type": "preview", "lines": lines, "fname": abs_path }),
-                        );
-                    }
-                    Err(err) => {
-                        error!(
-                            "[filer]Couldn't read first lines of {}, error: {:?}",
-                            path.display(),
-                            err
-                        );
-                    }
-                }
-            }
+        Provider::Filer(path) if path.is_dir() => {
+            preview_directory(&path, 2 * size, global_env().enable_icon, msg_id, "filer")?;
         }
-        Provider::Files(fpath) => match file_preview_impl(&fpath) {
-            Ok((lines, abs_path)) => {
-                write_response(
-                    json!({ "id": msg_id, "provider_id": "files", "lines": lines, "fname": abs_path }),
-                );
-            }
-            Err(err) => {
-                error!(
-                    "[files]Couldn't read first lines of {}, error: {:?}",
-                    fpath.display(),
-                    err
-                );
-            }
-        },
+        Provider::Files(path) | Provider::Filer(path) => {
+            preview_file(&path)?;
+        }
     }
 
     Ok(())

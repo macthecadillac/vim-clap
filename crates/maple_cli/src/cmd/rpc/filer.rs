@@ -69,9 +69,8 @@ pub(super) fn read_dir_entries<P: AsRef<Path>>(
 }
 
 #[derive(Serialize, Deserialize)]
-struct FilerParams {
-    cwd: String,
-    enable_icon: bool,
+pub struct FilerParams {
+    pub cwd: String,
 }
 
 impl From<serde_json::Map<String, serde_json::Value>> for FilerParams {
@@ -83,16 +82,13 @@ impl From<serde_json::Map<String, serde_json::Value>> for FilerParams {
                     .and_then(|x| x.as_str())
                     .unwrap_or("Missing cwd when deserializing into FilerParams"),
             ),
-            enable_icon: serde_map
-                .get("enable_icon")
-                .and_then(|x| x.as_bool())
-                .unwrap_or(false),
         }
     }
 }
 
-pub(super) fn handle_message(msg: Message) {
-    let FilerParams { cwd, enable_icon } = msg.params.into();
+pub(super) fn handle_message(msg: Message) -> Result<()> {
+    let FilerParams { cwd } = msg.params.into();
+    let enable_icon = super::global_env().enable_icon;
     debug!(
         "Recv filer params: cwd:{}, enable_icon:{}",
         cwd, enable_icon
@@ -114,6 +110,8 @@ pub(super) fn handle_message(msg: Message) {
     };
 
     write_response(result);
+
+    Ok(())
 }
 
 #[test]
