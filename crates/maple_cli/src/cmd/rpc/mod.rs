@@ -7,15 +7,12 @@ mod types;
 
 use crossbeam_channel::Sender;
 use log::{debug, error};
-use once_cell::sync::OnceCell;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::io::prelude::*;
 use std::ops::Deref;
 use std::thread;
 use types::GlobalEnv;
-
-static GLOBAL_ENV: OnceCell<GlobalEnv> = OnceCell::new();
 
 #[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]

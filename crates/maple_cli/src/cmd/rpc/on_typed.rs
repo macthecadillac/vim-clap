@@ -52,11 +52,11 @@ impl OnTypedHandler {
                 "dir": self.cwd,
                 "total": entries.len(),
                 });
-                json!({ "id": self.msg_id, "provider_id": "filer", "event": "on_init", "result": result })
+                json!({ "id": self.msg_id, "provider_id": self.provider_id, "event": "on_init", "result": result })
             }
             Err(err) => {
                 let error = json!({"message": format!("{}", err), "dir": self.cwd});
-                json!({ "id": self.msg_id, "provider_id": "filer", "error": error })
+                json!({ "id": self.msg_id, "provider_id": self.provider_id, "error": error })
             }
         };
 

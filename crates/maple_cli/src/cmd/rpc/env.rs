@@ -1,4 +1,7 @@
 use super::*;
+use once_cell::sync::OnceCell;
+
+static GLOBAL_ENV: OnceCell<GlobalEnv> = OnceCell::new();
 
 /// Ensure GLOBAL_ENV has been instalized before using it.
 pub fn global() -> impl Deref<Target = GlobalEnv> {
