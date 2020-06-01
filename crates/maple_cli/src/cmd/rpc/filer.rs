@@ -110,6 +110,7 @@ pub(super) fn handle_message(msg: Message) -> Result<()> {
     };
 
     write_response(result);
+
     Ok(())
 }
 

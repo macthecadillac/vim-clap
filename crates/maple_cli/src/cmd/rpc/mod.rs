@@ -48,22 +48,6 @@ fn loop_read(reader: impl BufRead, sink: &Sender<String>) {
     }
 }
 
-// Session {
-// Provider
-// Sender<Call>
-// }
-
-// Each session is associated with a provider.
-//
-// Each session can have OnTyped and OnMove event
-//
-// OnTyped -> query changes, rerun the filter against the source list.
-// OnMove -> Preview
-pub enum SessionEvent {
-    OnTyped(Message),
-    OnMove(Message),
-}
-
 /// Ensure GLOBAL_ENV has been instalized before using it.
 pub fn global_env() -> impl Deref<Target = GlobalEnv> {
     if let Some(x) = GLOBAL_ENV.get() {
@@ -128,17 +112,8 @@ fn spawn_handle_thread(msg: Message) -> anyhow::Result<()> {
     Ok(())
 }
 
-// stdio channel
-//
-//  process SessionEvent
-//     ->
-//
-// on_init => Start a new Session, invoke a new provider. Session(Provider)
-// on_typed => send message via channel to Session(Provider)
-// on_move
 fn loop_handle_message(rx: &crossbeam_channel::Receiver<String>) {
     for message in rx.iter() {
-        // Ignore the invalid message.
         if let Ok(msg) = serde_json::from_str::<Message>(&message.trim()) {
             debug!("Recv: {:?}", msg);
             let msg_id = msg.id;

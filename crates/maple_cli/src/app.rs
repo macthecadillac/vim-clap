@@ -85,7 +85,7 @@ impl Maple {
         if !self.no_log {
             if let Some(ref log_path) = self.log {
                 crate::logger::init(log_path)?;
-            } else if let Ok(log_path) = std::env::var("VIM_CLAP_LOG_FILE") {
+            } else if let Ok(log_path) = std::env::var("VIM_CLAP_LOG_PATH") {
                 crate::logger::init(log_path)?;
             }
         }

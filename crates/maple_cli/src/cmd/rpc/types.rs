@@ -1,38 +1,21 @@
 use super::Message;
 use anyhow::{anyhow, Context};
-use pattern::{extract_blines_lnum, extract_buf_tags_lnum, extract_proj_tags};
+use pattern::{
+    extract_blines_lnum, extract_buf_tags_lnum, extract_grep_position, extract_proj_tags,
+};
 use serde_json::value::Value;
-use std::convert::{TryFrom, TryInto};
+use std::convert::TryFrom;
 use std::path::PathBuf;
 
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct GrepPreviewEntry {
-    pub fpath: PathBuf,
-    pub lnum: usize,
-    pub col: usize,
-}
-
-impl TryFrom<String> for GrepPreviewEntry {
-    type Error = anyhow::Error;
-    fn try_from(line: String) -> std::result::Result<Self, Self::Error> {
-        let (fpath, lnum, col) =
-            pattern::extract_grep_position(&line).context("Couldn't extract grep position")?;
-        Ok(Self { fpath, lnum, col })
-    }
-}
-
 /// Preview environment on Vim CursorMoved event.
-pub struct PreviewEnv {
-    pub provider: Provider,
-}
-
-pub enum Provider {
+#[allow(dead_code)]
+pub enum ProviderExtended {
     Files(PathBuf),
-    Grep(GrepPreviewEntry),
-    Filer { path: PathBuf },
+    Filer(PathBuf),
+    Grep { path: PathBuf, lnum: usize },
+    BLines { path: PathBuf, lnum: usize },
     ProjTags { path: PathBuf, lnum: usize },
     BufferTags { path: PathBuf, lnum: usize },
-    BLines { path: PathBuf, lnum: usize },
 }
 
 #[derive(Debug, Clone)]
@@ -81,7 +64,7 @@ fn should_skip_leading_icon(provider_id: &str) -> bool {
     super::global_env().enable_icon && has_icon_support(provider_id)
 }
 
-impl TryFrom<Message> for PreviewEnv {
+impl TryFrom<Message> for ProviderExtended {
     type Error = anyhow::Error;
     fn try_from(msg: Message) -> std::result::Result<Self, Self::Error> {
         let provider_id = msg
@@ -90,12 +73,11 @@ impl TryFrom<Message> for PreviewEnv {
             .and_then(|x| x.as_str())
             .unwrap_or("Unknown provider id");
 
-        let cwd = String::from(
-            msg.params
-                .get("cwd")
-                .and_then(|x| x.as_str())
-                .unwrap_or("Missing cwd when deserializing into FilerParams"),
-        );
+        let cwd = msg
+            .params
+            .get("cwd")
+            .and_then(|x| x.as_str())
+            .unwrap_or("Missing cwd when deserializing into FilerParams");
 
         let display_curline = String::from(
             msg.params
@@ -110,30 +92,34 @@ impl TryFrom<Message> for PreviewEnv {
             display_curline
         };
 
-        let provider = match provider_id {
-            "files" => {
-                let mut fpath: PathBuf = cwd.into();
-                fpath.push(&curline);
-                Provider::Files(fpath)
-            }
+        let get_source_fpath = || {
+            msg.params
+                .get("source_fpath")
+                .and_then(|x| x.as_str().map(Into::into))
+                .context("Missing source_fpath")
+        };
+
+        // Rebuild the absolute path using cwd and relative path.
+        let rebuild_abs_path = || {
+            let mut path: PathBuf = cwd.into();
+            path.push(&curline);
+            path
+        };
+
+        log::debug!("curline: {}", curline);
+        let provider_ext = match provider_id {
+            "files" => Self::Files(rebuild_abs_path()),
+            "filer" => Self::Filer(rebuild_abs_path()),
             "blines" => {
                 let lnum = extract_blines_lnum(&curline).context("Couldn't extract buffer lnum")?;
-                let path = msg
-                    .params
-                    .get("source_fpath")
-                    .and_then(|x| x.as_str().map(Into::into))
-                    .context("Missing fname when deserializing into FilerParams")?;
-                Provider::BLines { path, lnum }
+                let path = get_source_fpath()?;
+                Self::BLines { path, lnum }
             }
             "tags" => {
                 let lnum =
                     extract_buf_tags_lnum(&curline).context("Couldn't extract buffer tags")?;
-                let path = msg
-                    .params
-                    .get("source_fpath")
-                    .and_then(|x| x.as_str().map(Into::into))
-                    .context("Missing fname when deserializing into FilerParams")?;
-                Provider::BufferTags { path, lnum }
+                let path = get_source_fpath()?;
+                Self::BufferTags { path, lnum }
             }
 
             "proj_tags" => {
@@ -141,19 +127,14 @@ impl TryFrom<Message> for PreviewEnv {
                     extract_proj_tags(&curline).context("Couldn't extract proj tags")?;
                 let mut path: PathBuf = cwd.into();
                 path.push(&p);
-                Provider::ProjTags { path, lnum }
-            }
-            "filer" => {
-                let mut path: PathBuf = cwd.into();
-                path.push(&curline);
-                Provider::Filer { path }
+                Self::ProjTags { path, lnum }
             }
             "grep" | "grep2" => {
-                let mut preview_entry: GrepPreviewEntry = curline.try_into()?;
-                let mut with_cwd: PathBuf = cwd.into();
-                with_cwd.push(&preview_entry.fpath);
-                preview_entry.fpath = with_cwd;
-                Provider::Grep(preview_entry)
+                let (fpath, lnum, _col) =
+                    extract_grep_position(&curline).context("Couldn't extract grep position")?;
+                let mut path: PathBuf = cwd.into();
+                path.push(&fpath);
+                Self::Grep { path, lnum }
             }
             _ => {
                 return Err(anyhow!(
@@ -164,21 +145,6 @@ impl TryFrom<Message> for PreviewEnv {
             }
         };
 
-        Ok(Self { provider })
+        Ok(provider_ext)
     }
-}
-
-#[test]
-fn test_grep_regex() {
-    use std::convert::TryInto;
-    let line = "install.sh:1:5:#!/usr/bin/env bash";
-    let e: GrepPreviewEntry = String::from(line).try_into().unwrap();
-    assert_eq!(
-        e,
-        GrepPreviewEntry {
-            fpath: "install.sh".into(),
-            lnum: 1,
-            col: 5
-        }
-    );
 }

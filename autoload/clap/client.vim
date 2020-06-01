@@ -8,7 +8,7 @@ let s:req_id = get(s:, 'req_id', 0)
 " Note: must use v:true/v:false for json_encode
 let s:enable_icon = g:clap_enable_icon ? v:true : v:false
 
-function! clap#client#send_request_initilize_env() abort
+function! clap#client#send_request_initialize_global_env() abort
   let s:req_id += 1
   call clap#job#daemon#send_message(json_encode({
         \ 'id': s:req_id,
