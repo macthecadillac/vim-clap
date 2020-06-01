@@ -68,9 +68,9 @@ fn spawn_handle_thread(msg: Message) -> anyhow::Result<()> {
         .spawn(move || {
             let handle_result = match &msg.method[..] {
                 "initialize_global_env" => env::initialize_global(msg),
-                "client.on_init" => on_init::OnInitHandler::from(msg).handle(),
-                "client.on_typed" => on_typed::OnTypedHandler::from(msg).handle(),
-                "client.on_move" => on_move::OnMoveHandler::from(msg).handle(),
+                "on_init" => on_init::OnInitHandler::from(msg).handle(),
+                "on_typed" => on_typed::OnTypedHandler::from(msg).handle(),
+                "on_move" => on_move::OnMoveHandler::from(msg).handle(),
                 _ => Err(anyhow::anyhow!("Unknonw method: {}", msg.method)),
             };
 

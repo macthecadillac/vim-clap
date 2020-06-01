@@ -79,7 +79,7 @@ endfunction
 
 function! s:send_message() abort
   call clap#client#send_params({
-        \ 'method': 'client.on_typed',
+        \ 'method': 'on_typed',
         \ 'params': {'cwd': s:current_dir, 'provider_id': 'filer'},
         \ })
 endfunction

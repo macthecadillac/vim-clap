@@ -25,7 +25,7 @@ function! clap#client#send_request_on_init(params) abort
   let s:req_id += 1
   call clap#job#daemon#send_message(json_encode({
         \ 'id': s:req_id,
-        \ 'method': 'client.on_init',
+        \ 'method': 'on_init',
         \ 'params': a:params
         \ }))
 endfunction
@@ -44,7 +44,7 @@ function! clap#client#send_request_on_init_default_impl() abort
   let s:req_id += 1
   call clap#job#daemon#send_message(json_encode({
         \ 'id': s:req_id,
-        \ 'method': 'client.on_init',
+        \ 'method': 'on_init',
         \ 'params': {
         \   'cwd': g:clap.provider.id ==# 'filer' ? clap#provider#filer#current_dir() : clap#rooter#working_dir(),
         \   'provider_id': g:clap.provider.id,
@@ -57,7 +57,7 @@ function! clap#client#send_request_on_init_inner() abort
   let s:req_id += 1
   call clap#job#daemon#send_message(json_encode({
         \ 'id': s:req_id,
-        \ 'method': 'client.on_init',
+        \ 'method': 'on_init',
         \ 'params': {
         \   'cwd': g:clap.provider.id ==# 'filer' ? clap#provider#filer#current_dir() : clap#rooter#working_dir(),
         \   'provider_id': g:clap.provider.id,
@@ -70,7 +70,7 @@ function! clap#client#send_request_on_typed(params) abort
   let s:req_id += 1
   call clap#job#daemon#send_message(json_encode({
         \ 'id': s:req_id,
-        \ 'method': 'client.on_typed',
+        \ 'method': 'on_typed',
         \ 'params': a:params
         \ }))
 endfunction
@@ -80,7 +80,7 @@ function! clap#client#send_request_on_move() abort
   let curline = g:clap.display.getcurline()
   let msg = {
       \ 'id': s:req_id,
-      \ 'method': 'client.on_move',
+      \ 'method': 'on_move',
       \ 'params': {
       \   'cwd': g:clap.provider.id ==# 'filer' ? clap#provider#filer#current_dir() : clap#rooter#working_dir(),
       \   'curline': curline,
