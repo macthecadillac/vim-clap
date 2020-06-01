@@ -99,6 +99,14 @@ mod tests {
     use super::*;
 
     #[test]
+    fn test_grep_regex() {
+        use std::convert::TryInto;
+        let line = "install.sh:1:5:#!/usr/bin/env bash";
+        let e = extract_grep_position(line).unwrap();
+        assert_eq!(("install.sh".into(), 1, 5), e);
+    }
+
+    #[test]
     fn test_tag_name_only() {
         let line = "<Backspace>:60       [map]           inoremap <silent> <buffer> <Backspace> <C-R>=clap#handler#bs_action()<CR>  ftplugin/clap_input.vim";
         let mat = TAG_RE.find(line);

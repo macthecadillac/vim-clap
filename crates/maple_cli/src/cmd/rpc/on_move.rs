@@ -1,4 +1,4 @@
-use super::types::{PreviewEnv, Provider};
+use super::types::{ProviderExtended, ProviderExtended::*};
 use super::*;
 use anyhow::{anyhow, Context, Result};
 use log::{debug, error};
@@ -89,20 +89,20 @@ pub(super) fn handle_message(msg: Message) -> Result<()> {
     let preview_file_at =
         |path: &Path, lnum: usize| apply_preview_file_at(&path, lnum, size, msg_id, provider_id);
 
-    let PreviewEnv { provider } = msg.try_into()?;
+    let provider_ext: ProviderExtended = msg.try_into()?;
 
-    match provider {
-        Provider::BLines { path, lnum }
-        | Provider::Grep { path, lnum }
-        | Provider::ProjTags { path, lnum }
-        | Provider::BufferTags { path, lnum } => {
+    match provider_ext {
+        BLines { path, lnum }
+        | Grep { path, lnum }
+        | ProjTags { path, lnum }
+        | BufferTags { path, lnum } => {
             debug!("path:{}, lnum:{}", path.display(), lnum);
             preview_file_at(&path, lnum);
         }
-        Provider::Filer(path) if path.is_dir() => {
+        Filer(path) if path.is_dir() => {
             preview_directory(&path, 2 * size, global_env().enable_icon, msg_id, "filer")?;
         }
-        Provider::Files(path) | Provider::Filer(path) => {
+        Files(path) | Filer(path) => {
             preview_file(&path)?;
         }
     }
