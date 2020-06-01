@@ -88,7 +88,7 @@ impl From<serde_json::Map<String, serde_json::Value>> for FilerParams {
 
 pub(super) fn handle_message(msg: Message) -> Result<()> {
     let FilerParams { cwd } = msg.params.into();
-    let enable_icon = super::global_env().enable_icon;
+    let enable_icon = super::env::global().enable_icon;
     debug!(
         "Recv filer params: cwd:{}, enable_icon:{}",
         cwd, enable_icon

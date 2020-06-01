@@ -6,7 +6,7 @@ use std::io::BufRead;
 
 fn handle_filer(msg: Message) -> Result<()> {
     let FilerParams { cwd } = msg.params.into();
-    let enable_icon = super::global_env().enable_icon;
+    let enable_icon = super::env::global().enable_icon;
 
     let result = match read_dir_entries(&cwd, enable_icon, None) {
         Ok(entries) => {

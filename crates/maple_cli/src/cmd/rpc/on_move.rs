@@ -81,7 +81,7 @@ pub(super) fn handle_message(msg: Message) -> Result<()> {
         .and_then(|x| x.as_str())
         .context("Unknown provider_id")?;
 
-    let size = preview_size_of(provider_id);
+    let size = super::env::preview_size_of(provider_id);
     let msg_id = msg.id;
 
     let preview_file = |path: &Path| apply_preview_file(&path, 2 * size, msg_id, provider_id);
@@ -100,7 +100,13 @@ pub(super) fn handle_message(msg: Message) -> Result<()> {
             preview_file_at(&path, lnum);
         }
         Filer(path) if path.is_dir() => {
-            preview_directory(&path, 2 * size, global_env().enable_icon, msg_id, "filer")?;
+            preview_directory(
+                &path,
+                2 * size,
+                super::env::global().enable_icon,
+                msg_id,
+                "filer",
+            )?;
         }
         Files(path) | Filer(path) => {
             preview_file(&path)?;

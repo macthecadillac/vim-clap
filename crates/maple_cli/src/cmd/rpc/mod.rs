@@ -1,3 +1,4 @@
+mod env;
 mod filer;
 mod on_init;
 mod on_move;
@@ -48,57 +49,13 @@ fn loop_read(reader: impl BufRead, sink: &Sender<String>) {
     }
 }
 
-/// Ensure GLOBAL_ENV has been instalized before using it.
-pub fn global_env() -> impl Deref<Target = GlobalEnv> {
-    if let Some(x) = GLOBAL_ENV.get() {
-        x
-    } else if cfg!(debug_assertions) {
-        panic!("Uninitalized static: GLOBAL_ENV")
-    } else {
-        unreachable!("Never forget to intialize before using it!")
-    }
-}
-
-pub fn preview_size_of(provider_id: &str) -> usize {
-    global_env().preview_size_of(provider_id)
-}
-
-fn initialize_global_env(msg: Message) -> anyhow::Result<()> {
-    let is_nvim = msg
-        .params
-        .get("is_nvim")
-        .and_then(|x| x.as_bool())
-        .unwrap_or(false);
-
-    let enable_icon = msg
-        .params
-        .get("enable_icon")
-        .and_then(|x| x.as_bool())
-        .unwrap_or(false);
-
-    let preview_size = msg
-        .params
-        .get("clap_preview_size")
-        .expect("Missing clap_preview_size on initialize_global_env");
-
-    let global_env = GlobalEnv::new(is_nvim, enable_icon, preview_size.clone());
-
-    if let Err(e) = GLOBAL_ENV.set(global_env) {
-        debug!("failed to initialized GLOBAL_ENV, error: {:?}", e);
-    } else {
-        debug!("GLOBAL_ENV initialized successfully");
-    }
-
-    Ok(())
-}
-
 fn spawn_handle_thread(msg: Message) -> anyhow::Result<()> {
     let msg_id = msg.id;
     thread::Builder::new()
         .name(format!("msg-handle-{}", msg_id))
         .spawn(move || {
             let handle_result = match &msg.method[..] {
-                "initialize_global_env" => initialize_global_env(msg),
+                "initialize_global_env" => env::initialize_global(msg),
                 "client.on_init" => on_init::handle_message(msg),
                 "client.on_typed" => filer::handle_message(msg),
                 "client.on_move" => on_move::handle_message(msg),
