@@ -7,37 +7,38 @@ set cpoptions&vim
 let s:on_move_timer = -1
 let s:on_move_delay = get(g:, 'clap_on_move_delay', 300)
 
-function! clap#impl#on_move#handle_filer_preview(decoded) abort
-  if empty(a:decoded.lines)
+function! clap#impl#on_move#handle_filer_preview(result) abort
+  if empty(a:result.lines)
     call g:clap.preview.show(['Empty entries'])
   else
-    call g:clap.preview.show(a:decoded.lines)
-    if has_key(a:decoded, 'is_dir')
+    call g:clap.preview.show(a:result.lines)
+    if has_key(a:result, 'is_dir')
       call g:clap.preview.set_syntax('clap_filer')
       call clap#preview#clear_header_highlight()
     else
-      if has_key(a:decoded, 'fname')
-        call g:clap.preview.set_syntax(clap#ext#into_filetype(a:decoded.fname))
+      if has_key(a:result, 'fname')
+        call g:clap.preview.set_syntax(clap#ext#into_filetype(a:result.fname))
       endif
       call clap#preview#highlight_header()
     endif
   endif
 endfunction
 
-function! clap#impl#on_move#handle_file_preview(decoded) abort
-  if has_key(a:decoded, 'lines')
+function! clap#impl#on_move#handle_file_preview(result) abort
+  if has_key(a:result, 'lines')
     try
-      call g:clap.preview.show(a:decoded.lines)
+      call g:clap.preview.show(a:result.lines)
     catch
       return
     endtry
-    if has_key(a:decoded, 'fname')
-      call g:clap.preview.set_syntax(clap#ext#into_filetype(a:decoded.fname))
+
+    if has_key(a:result, 'fname')
+      call g:clap.preview.set_syntax(clap#ext#into_filetype(a:result.fname))
     endif
     call clap#preview#highlight_header()
 
-    if has_key(a:decoded, 'hi_lnum')
-      call g:clap.preview.add_highlight(a:decoded.hi_lnum+1)
+    if has_key(a:result, 'hi_lnum')
+      call g:clap.preview.add_highlight(a:result.hi_lnum+1)
     endif
   endif
 endfunction

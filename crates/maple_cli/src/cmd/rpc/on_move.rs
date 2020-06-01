@@ -67,9 +67,15 @@ impl OnMoveHandler {
                     "sending msg_id:{}, provider_id:{}",
                     self.msg_id, self.provider_id
                 );
-                write_response(
-                    json!({ "id": self.msg_id, "provider_id": self.provider_id, "event": "on_move", "lines": lines, "fname": fname, "hi_lnum": hi_lnum }),
-                );
+                write_response(json!({
+                "id": self.msg_id,
+                "provider_id": self.provider_id,
+                "result": {
+                  "event": "on_move",
+                  "lines": lines,
+                  "fname": fname,
+                  "hi_lnum": hi_lnum
+                }}));
             }
             Err(err) => {
                 error!(
@@ -88,18 +94,28 @@ impl OnMoveHandler {
         let lines = std::iter::once(abs_path.clone())
             .chain(lines_iter)
             .collect::<Vec<_>>();
-        write_response(
-            json!({ "id": self.msg_id, "provider_id": self.provider_id, "event": "on_move", "lines": lines, "fname": abs_path }),
-        );
+        write_response(json!({
+        "id": self.msg_id,
+        "provider_id": self.provider_id,
+        "result": {
+          "event": "on_move",
+          "lines": lines,
+          "fname": abs_path
+        }}));
         Ok(())
     }
 
     fn preview_directory<P: AsRef<Path>>(&self, path: P) -> Result<()> {
         let enable_icon = super::env::global().enable_icon;
         let lines = super::filer::read_dir_entries(&path, enable_icon, Some(2 * self.size))?;
-        write_response(
-            json!({ "id": self.msg_id, "provider_id": self.provider_id, "event": "on_move", "lines": lines, "is_dir": true }),
-        );
+        write_response(json!({
+        "id": self.msg_id,
+        "provider_id": self.provider_id,
+        "result": {
+          "event": "on_move",
+          "lines": lines,
+          "is_dir": true
+        }}));
         Ok(())
     }
 }

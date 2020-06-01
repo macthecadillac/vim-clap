@@ -49,18 +49,22 @@ impl OnInitHandler {
     fn handle_filer(&self) -> Result<()> {
         let enable_icon = super::env::global().enable_icon;
         let result = match read_dir_entries(&self.cwd, enable_icon, None) {
-            Ok(entries) => {
-                let result = json!({
-                "entries": entries,
-                "dir": self.cwd,
-                "total": entries.len(),
-                });
-                json!({ "id": self.msg_id, "provider_id": "filer", "event": "on_init", "result": result })
-            }
-            Err(err) => {
-                let error = json!({"message": format!("{}", err), "dir": self.cwd});
-                json!({ "id": self.msg_id, "provider_id": "filer", "error": error })
-            }
+            Ok(entries) => json!({
+            "id": self.msg_id,
+            "provider_id": "filer",
+            "result": {
+              "dir": self.cwd,
+              "total": entries.len(),
+              "event": "on_init",
+              "entries": entries,
+            }}),
+            Err(err) => json!({
+            "id": self.msg_id,
+            "provider_id": "filer",
+            "error": {
+              "message": format!("{}", err),
+              "dir": self.cwd
+            }}),
         };
 
         write_response(result);
@@ -84,9 +88,13 @@ impl OnInitHandler {
             self.provider_id
         );
 
-        write_response(
-            json!({ "id": self.msg_id, "provider_id": self.provider_id, "event": "on_init", "lines": lines, }),
-        );
+        write_response(json!({
+        "id": self.msg_id,
+        "provider_id": self.provider_id,
+        "result": {
+          "event": "on_init",
+          "lines": lines,
+        }}));
 
         Ok(())
     }

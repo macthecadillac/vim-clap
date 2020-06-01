@@ -24,7 +24,9 @@ function! clap#provider#filer#daemon_handle(decoded) abort
     return
   endif
 
-  if has_key(a:decoded, 'result')
+  if a:decoded.result.event ==# 'on_move'
+    call clap#impl#on_move#handle_file_preview(a:decoded.result)
+  else
     let result = a:decoded.result
     if result.total == 0
       let s:filer_empty_cache[result.dir] = s:DIRECTORY_IS_EMPTY
@@ -36,8 +38,6 @@ function! clap#provider#filer#daemon_handle(decoded) abort
     call clap#sign#reset_to_first_line()
     call clap#state#refresh_matches_count(string(result.total))
     call g:clap#display_win.shrink_if_undersize()
-  else
-    call clap#impl#on_move#handle_file_preview(a:decoded)
   endif
 endfunction
 

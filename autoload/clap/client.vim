@@ -114,20 +114,20 @@ function! clap#client#handle(msg) abort
   endif
 
   if decoded.provider_id ==# 'filer'
-    if decoded.event ==# 'on_move'
-      call clap#impl#on_move#handle_filer_preview(decoded)
+    if decoded.result.event ==# 'on_move'
+      call clap#impl#on_move#handle_filer_preview(decoded.result)
     else
       call clap#provider#filer#daemon_handle(decoded)
     endif
     return
   endif
 
-  if decoded.event ==# 'on_init'
-    call g:clap.display.set_lines(decoded.lines)
+  if decoded.result.event ==# 'on_init'
+    call g:clap.display.set_lines(decoded.result.lines)
     return
   endif
 
-  call clap#impl#on_move#handle_file_preview(decoded)
+  call clap#impl#on_move#handle_file_preview(decoded.result)
 endfunction
 
 let &cpoptions = s:save_cpo
