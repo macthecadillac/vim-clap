@@ -1,6 +1,6 @@
-use super::types::{ProviderExtended, ProviderExtended::*};
+use super::types::{OnMove, OnMove::*};
 use super::*;
-use anyhow::{anyhow, Context, Result};
+use anyhow::{anyhow, Result};
 use log::{debug, error};
 use std::convert::TryInto;
 use std::path::Path;
@@ -73,45 +73,59 @@ fn preview_directory<P: AsRef<Path>>(
     Ok(())
 }
 
-pub(super) fn handle_message(msg: Message) -> Result<()> {
-    let msg_cloned = msg.clone();
-    let provider_id = msg_cloned
-        .params
-        .get("provider_id")
-        .and_then(|x| x.as_str())
-        .context("Unknown provider_id")?;
+pub struct OnMoveHandler {
+    pub msg_id: u64,
+    pub provider_id: String,
+    pub size: usize,
+    pub which_move: OnMove,
+}
 
-    let size = super::env::preview_size_of(provider_id);
-    let msg_id = msg.id;
-
-    let preview_file = |path: &Path| apply_preview_file(&path, 2 * size, msg_id, provider_id);
-
-    let preview_file_at =
-        |path: &Path, lnum: usize| apply_preview_file_at(&path, lnum, size, msg_id, provider_id);
-
-    let provider_ext: ProviderExtended = msg.try_into()?;
-
-    match provider_ext {
-        BLines { path, lnum }
-        | Grep { path, lnum }
-        | ProjTags { path, lnum }
-        | BufferTags { path, lnum } => {
-            debug!("path:{}, lnum:{}", path.display(), lnum);
-            preview_file_at(&path, lnum);
-        }
-        Filer(path) if path.is_dir() => {
-            preview_directory(
-                &path,
-                2 * size,
-                super::env::global().enable_icon,
-                msg_id,
-                "filer",
-            )?;
-        }
-        Files(path) | Filer(path) => {
-            preview_file(&path)?;
+impl From<Message> for OnMoveHandler {
+    fn from(msg: Message) -> Self {
+        let msg_id = msg.get_message_id();
+        let provider_id = msg.get_provider_id();
+        let size = super::env::preview_size_of(&provider_id);
+        let which_move: OnMove = msg.try_into().expect("Couldn't into OnMove");
+        Self {
+            msg_id,
+            provider_id,
+            size,
+            which_move,
         }
     }
+}
 
-    Ok(())
+impl OnMoveHandler {
+    pub fn handle(&self) -> Result<()> {
+        let preview_file =
+            |path: &Path| apply_preview_file(path, 2 * self.size, self.msg_id, &self.provider_id);
+
+        let preview_file_at = |path: &Path, lnum: usize| {
+            apply_preview_file_at(path, lnum, self.size, self.msg_id, &self.provider_id)
+        };
+
+        match self.which_move.clone() {
+            BLines { path, lnum }
+            | Grep { path, lnum }
+            | ProjTags { path, lnum }
+            | BufferTags { path, lnum } => {
+                debug!("path:{}, lnum:{}", path.display(), lnum);
+                preview_file_at(&path, lnum);
+            }
+            Filer(path) if path.is_dir() => {
+                preview_directory(
+                    &path,
+                    2 * self.size,
+                    super::env::global().enable_icon,
+                    self.msg_id,
+                    "filer",
+                )?;
+            }
+            Files(path) | Filer(path) => {
+                preview_file(&path)?;
+            }
+        }
+
+        Ok(())
+    }
 }

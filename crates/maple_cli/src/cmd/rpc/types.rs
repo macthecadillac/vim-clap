@@ -7,17 +7,6 @@ use serde_json::value::Value;
 use std::convert::TryFrom;
 use std::path::PathBuf;
 
-/// Preview environment on Vim CursorMoved event.
-#[allow(dead_code)]
-pub enum ProviderExtended {
-    Files(PathBuf),
-    Filer(PathBuf),
-    Grep { path: PathBuf, lnum: usize },
-    BLines { path: PathBuf, lnum: usize },
-    ProjTags { path: PathBuf, lnum: usize },
-    BufferTags { path: PathBuf, lnum: usize },
-}
-
 #[derive(Debug, Clone)]
 pub struct GlobalEnv {
     pub is_nvim: bool,
@@ -56,15 +45,19 @@ impl GlobalEnv {
     }
 }
 
-fn has_icon_support(provider_id: &str) -> bool {
-    provider_id != "proj_tags" && provider_id != "blines"
+/// Preview environment on Vim CursorMoved event.
+#[derive(Debug, Clone)]
+#[allow(dead_code)]
+pub enum OnMove {
+    Files(PathBuf),
+    Filer(PathBuf),
+    Grep { path: PathBuf, lnum: usize },
+    BLines { path: PathBuf, lnum: usize },
+    ProjTags { path: PathBuf, lnum: usize },
+    BufferTags { path: PathBuf, lnum: usize },
 }
 
-fn should_skip_leading_icon(provider_id: &str) -> bool {
-    super::env::global().enable_icon && has_icon_support(provider_id)
-}
-
-impl TryFrom<Message> for ProviderExtended {
+impl TryFrom<Message> for OnMove {
     type Error = anyhow::Error;
     fn try_from(msg: Message) -> std::result::Result<Self, Self::Error> {
         let provider_id = msg
@@ -86,7 +79,7 @@ impl TryFrom<Message> for ProviderExtended {
                 .unwrap_or("Missing fname when deserializing into FilerParams"),
         );
 
-        let curline = if should_skip_leading_icon(provider_id) {
+        let curline = if super::env::should_skip_leading_icon(provider_id) {
             display_curline.chars().skip(2).collect()
         } else {
             display_curline
@@ -107,7 +100,7 @@ impl TryFrom<Message> for ProviderExtended {
         };
 
         log::debug!("curline: {}", curline);
-        let provider_ext = match provider_id {
+        let context = match provider_id {
             "files" => Self::Files(rebuild_abs_path()),
             "filer" => Self::Filer(rebuild_abs_path()),
             "blines" => {
@@ -145,6 +138,6 @@ impl TryFrom<Message> for ProviderExtended {
             }
         };
 
-        Ok(provider_ext)
+        Ok(context)
     }
 }

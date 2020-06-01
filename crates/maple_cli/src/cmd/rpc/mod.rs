@@ -2,6 +2,7 @@ mod env;
 mod filer;
 mod on_init;
 mod on_move;
+mod on_typed;
 mod types;
 
 use crossbeam_channel::Sender;
@@ -22,6 +23,20 @@ pub struct Message {
     pub method: String,
     pub params: serde_json::Map<String, Value>,
     pub id: u64,
+}
+
+impl Message {
+    pub fn get_message_id(&self) -> u64 {
+        self.id
+    }
+
+    pub fn get_provider_id(&self) -> String {
+        self.params
+            .get("provider_id")
+            .and_then(|x| x.as_str())
+            .unwrap_or("Unknown provider id")
+            .into()
+    }
 }
 
 fn write_response<T: Serialize>(msg: T) {
@@ -56,9 +71,9 @@ fn spawn_handle_thread(msg: Message) -> anyhow::Result<()> {
         .spawn(move || {
             let handle_result = match &msg.method[..] {
                 "initialize_global_env" => env::initialize_global(msg),
-                "client.on_init" => on_init::handle_message(msg),
-                "client.on_typed" => filer::handle_message(msg),
-                "client.on_move" => on_move::handle_message(msg),
+                "client.on_init" => on_init::OnInitHandler::from(msg).handle(),
+                "client.on_typed" => on_typed::OnTypedHandler::from(msg).handle(),
+                "client.on_move" => on_move::OnMoveHandler::from(msg).handle(),
                 _ => Err(anyhow::anyhow!("Unknonw method: {}", msg.method)),
             };
 

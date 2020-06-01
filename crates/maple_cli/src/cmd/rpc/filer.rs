@@ -1,9 +1,5 @@
-use super::{write_response, Message};
 use anyhow::Result;
 use icon::prepend_filer_icon;
-use log::debug;
-use serde::{Deserialize, Serialize};
-use serde_json::json;
 use std::path::{self, Path, PathBuf};
 use std::{fs, io};
 
@@ -66,52 +62,6 @@ pub(super) fn read_dir_entries<P: AsRef<Path>>(
     entries.sort();
 
     Ok(entries)
-}
-
-#[derive(Serialize, Deserialize)]
-pub(super) struct FilerParams {
-    pub cwd: String,
-}
-
-impl From<serde_json::Map<String, serde_json::Value>> for FilerParams {
-    fn from(serde_map: serde_json::Map<String, serde_json::Value>) -> Self {
-        Self {
-            cwd: String::from(
-                serde_map
-                    .get("cwd")
-                    .and_then(|x| x.as_str())
-                    .unwrap_or("Missing cwd when deserializing into FilerParams"),
-            ),
-        }
-    }
-}
-
-pub(super) fn handle_message(msg: Message) -> Result<()> {
-    let FilerParams { cwd } = msg.params.into();
-    let enable_icon = super::env::global().enable_icon;
-    debug!(
-        "Recv filer params: cwd:{}, enable_icon:{}",
-        cwd, enable_icon
-    );
-
-    let result = match read_dir_entries(&cwd, enable_icon, None) {
-        Ok(entries) => {
-            let result = json!({
-            "entries": entries,
-            "dir": cwd,
-            "total": entries.len(),
-            });
-            json!({ "id": msg.id, "provider_id": "filer", "event": "on_init", "result": result })
-        }
-        Err(err) => {
-            let error = json!({"message": format!("{}", err), "dir": cwd});
-            json!({ "id": msg.id, "provider_id": "filer", "error": error })
-        }
-    };
-
-    write_response(result);
-
-    Ok(())
 }
 
 #[test]
